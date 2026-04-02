@@ -1,50 +1,43 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Sidebar from './components/Sidebar';
-import Overview from './components/Overview';
-import CandidateTracker from './components/CandidateTracker';
-import FollowUpQueue from './components/FollowUpQueue';
-import TaskQueue from './components/TaskQueue';
-import DailyChecklist from './components/DailyChecklist';
-import RolesHealth from './components/RolesHealth';
-import { seedDataIfNeeded } from './data/seed';
+import { useState } from 'react';
+import Sidebar, { type Section } from './components/Sidebar';
+import DashboardOverview from './components/DashboardOverview';
+import ClientList from './components/ClientList';
+import ForReview from './components/ForReview';
+import FollowUpTracker from './components/FollowUpTracker';
+import PipelineView from './components/PipelineView';
+import { forReviewCandidates } from './data/seed';
 
 export default function Home() {
-  const [activeSection, setActiveSection] = useState('overview');
-  const [ready, setReady] = useState(false);
+  const [section, setSection] = useState<Section>('overview');
 
-  useEffect(() => {
-    seedDataIfNeeded();
-    setReady(true);
-  }, []);
-
-  if (!ready) return null;
-
-  const renderSection = () => {
-    switch (activeSection) {
+  const render = () => {
+    switch (section) {
       case 'overview':
-        return <Overview onNavigate={setActiveSection} />;
-      case 'candidates':
-        return <CandidateTracker />;
+        return <DashboardOverview onNavigate={setSection} />;
+      case 'clients':
+        return <ClientList />;
+      case 'review':
+        return <ForReview />;
       case 'followup':
-        return <FollowUpQueue />;
-      case 'tasks':
-        return <TaskQueue />;
-      case 'checklist':
-        return <DailyChecklist />;
-      case 'roles':
-        return <RolesHealth />;
+        return <FollowUpTracker />;
+      case 'pipeline':
+        return <PipelineView />;
       default:
-        return <Overview onNavigate={setActiveSection} />;
+        return <DashboardOverview onNavigate={setSection} />;
     }
   };
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar active={activeSection} onNavigate={setActiveSection} />
-      <main className="flex-1 overflow-y-auto p-6 lg:p-8">
-        {renderSection()}
+      <Sidebar
+        active={section}
+        onNavigate={setSection}
+        reviewCount={forReviewCandidates.length}
+      />
+      <main className="flex-1 overflow-y-auto p-6 lg:p-8 scrollbar-thin">
+        {render()}
       </main>
     </div>
   );
