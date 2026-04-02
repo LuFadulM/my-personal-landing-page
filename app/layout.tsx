@@ -3,17 +3,13 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Contrario Dashboard',
-  description: 'Operations dashboard for Contrario',
+  description: 'Recruiting operations dashboard for Contrario',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }

@@ -3,78 +3,79 @@
 import {
   LayoutDashboard,
   Users,
-  Clock,
-  ListTodo,
-  CheckSquare,
-  Activity,
+  ClipboardCheck,
+  AlertTriangle,
+  GitBranch,
+  Building2,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import { useState } from 'react';
+import { cn } from '../lib/utils';
 
-interface SidebarProps {
-  active: string;
-  onNavigate: (section: string) => void;
+export type Section =
+  | 'overview'
+  | 'clients'
+  | 'review'
+  | 'followup'
+  | 'pipeline'
+  | 'roles';
+
+interface Props {
+  active: Section;
+  onNavigate: (s: Section) => void;
+  reviewCount: number;
 }
 
-const navItems = [
+const items: { id: Section; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-  { id: 'candidates', label: 'Candidate Tracker', icon: Users },
-  { id: 'followup', label: 'Follow-Up Queue', icon: Clock },
-  { id: 'tasks', label: 'Task Queue', icon: ListTodo },
-  { id: 'checklist', label: 'Daily Checklist', icon: CheckSquare },
-  { id: 'roles', label: 'Roles Health', icon: Activity },
+  { id: 'clients', label: 'Clients & Roles', icon: Building2 },
+  { id: 'review', label: 'For Review', icon: ClipboardCheck },
+  { id: 'followup', label: 'Follow-Up Tracker', icon: AlertTriangle },
+  { id: 'pipeline', label: 'Stage Pipeline', icon: GitBranch },
 ];
 
-export default function Sidebar({ active, onNavigate }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false);
-
+export default function Sidebar({ active, onNavigate, reviewCount }: Props) {
   return (
-    <aside
-      className={`${
-        collapsed ? 'w-16' : 'w-64'
-      } bg-bg-card border-r border-gray-800 flex flex-col transition-all duration-200 shrink-0`}
-    >
-      <div className="p-4 flex items-center justify-between border-b border-gray-800">
-        {!collapsed && (
-          <h1 className="text-lg font-bold text-white tracking-tight">
-            <span className="text-accent">C</span>ontrario
-          </h1>
-        )}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-1 rounded hover:bg-bg-hover text-gray-400 hover:text-white transition-colors"
-        >
-          {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-        </button>
+    <aside className="w-60 bg-surface-card border-r border-surface-border flex flex-col shrink-0">
+      <div className="px-5 py-5 border-b border-surface-border">
+        <h1 className="text-lg font-bold tracking-tight text-white">
+          <span className="text-brand-500">C</span>ontrario
+        </h1>
+        <p className="text-[11px] text-gray-500 mt-0.5">Recruiting Ops Dashboard</p>
       </div>
 
-      <nav className="flex-1 py-4">
-        {navItems.map((item) => {
+      <nav className="flex-1 py-3">
+        {items.map((item) => {
           const Icon = item.icon;
           const isActive = active === item.id;
           return (
             <button
               key={item.id}
               onClick={() => onNavigate(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-all ${
+              className={cn(
+                'w-full flex items-center gap-3 px-5 py-2.5 text-[13px] transition-all relative',
                 isActive
-                  ? 'bg-accent/10 text-accent border-r-2 border-accent'
-                  : 'text-gray-400 hover:text-white hover:bg-bg-hover'
-              }`}
-              title={collapsed ? item.label : undefined}
+                  ? 'bg-brand-500/10 text-brand-400 font-medium'
+                  : 'text-gray-400 hover:text-gray-200 hover:bg-surface-hover'
+              )}
             >
-              <Icon size={20} />
-              {!collapsed && <span>{item.label}</span>}
+              {isActive && (
+                <span className="absolute left-0 top-1 bottom-1 w-[3px] rounded-r bg-brand-500" />
+              )}
+              <Icon size={18} />
+              <span>{item.label}</span>
+              {item.id === 'review' && reviewCount > 0 && (
+                <span className="ml-auto bg-brand-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] text-center">
+                  {reviewCount}
+                </span>
+              )}
             </button>
           );
         })}
       </nav>
 
-      <div className="p-4 border-t border-gray-800">
-        {!collapsed && (
-          <p className="text-xs text-gray-500">Contrario Ops v1.0</p>
-        )}
+      <div className="px-5 py-4 border-t border-surface-border">
+        <p className="text-[10px] text-gray-600">Contrario Dashboard v2.0</p>
       </div>
     </aside>
   );
