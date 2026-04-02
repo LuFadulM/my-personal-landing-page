@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Overview from './components/Overview';
 import CandidateTracker from './components/CandidateTracker';
@@ -8,9 +8,18 @@ import FollowUpQueue from './components/FollowUpQueue';
 import TaskQueue from './components/TaskQueue';
 import DailyChecklist from './components/DailyChecklist';
 import RolesHealth from './components/RolesHealth';
+import { seedDataIfNeeded } from './data/seed';
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState('overview');
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    seedDataIfNeeded();
+    setReady(true);
+  }, []);
+
+  if (!ready) return null;
 
   const renderSection = () => {
     switch (activeSection) {
