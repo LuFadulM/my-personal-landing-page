@@ -30,7 +30,7 @@ export default function EditJDPage() {
   if (!jd) return <div className="p-8 text-sm text-muted-foreground">JD not found.</div>;
 
   return (
-    <div className="p-6 lg:p-8 max-w-3xl">
+    <div className="px-5 lg:px-8 py-6 max-w-3xl mx-auto">
       <PageHeader
         title="Edit Job Description"
         action={

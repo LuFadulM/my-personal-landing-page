@@ -86,7 +86,7 @@ export default function EmailsPage() {
   }
 
   return (
-    <div className="p-6 lg:p-8 max-w-6xl">
+    <div className="px-5 lg:px-8 py-6 max-w-[1400px] mx-auto">
       <PageHeader
         title="Email Tracker"
         description={`${emails.length} tracked email${emails.length !== 1 ? 's' : ''}`}
