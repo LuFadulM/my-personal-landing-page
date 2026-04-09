@@ -18,7 +18,7 @@ export default function JDsPage() {
   }, []);
 
   return (
-    <div className="p-6 lg:p-8 max-w-6xl">
+    <div className="px-5 lg:px-8 py-6 max-w-[1400px] mx-auto">
       <PageHeader
         title="Job Descriptions"
         description={`${jds.length} job description${jds.length !== 1 ? 's' : ''}`}

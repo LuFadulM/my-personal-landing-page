@@ -75,7 +75,7 @@ export default function QAPage() {
   }
 
   return (
-    <div className="p-6 lg:p-8 max-w-6xl">
+    <div className="px-5 lg:px-8 py-6 max-w-[1400px] mx-auto">
       <PageHeader title="QA Reviews" description={`${reviews.length} review${reviews.length !== 1 ? 's' : ''}`} />
 
       <div className="space-y-4">

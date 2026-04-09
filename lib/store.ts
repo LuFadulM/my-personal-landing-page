@@ -1,5 +1,9 @@
 'use client';
 
+import { followUpSeed, type FollowUp } from './seed-followups';
+
+export type { FollowUp, FUPCategory } from './seed-followups';
+
 // ── Types ─────────────────────────────────────────────
 export type TaskStatus = 'todo' | 'doing' | 'done';
 export type TaskPriority = 'low' | 'medium' | 'high';
@@ -68,6 +72,8 @@ const KEYS = {
   emails: 'opsos_emails',
   docs: 'opsos_docs',
   qa: 'opsos_qa',
+  followups: 'opsos_followups',
+  seeded: 'opsos_followups_seeded',
 } as const;
 
 // ── Helpers ───────────────────────────────────────────
@@ -142,6 +148,19 @@ export const taskStore = createStore<Task>(KEYS.tasks);
 export const emailStore = createStore<Email>(KEYS.emails);
 export const docStore = createStore<Doc>(KEYS.docs);
 export const qaStore = createStore<QAReview>(KEYS.qa);
+export const followUpStore = createStore<FollowUp>(KEYS.followups);
+
+// ── One-time seed of follow-ups on first visit ────────
+export function seedFollowUpsIfNeeded(): void {
+  if (typeof window === 'undefined') return;
+  if (localStorage.getItem(KEYS.seeded) === 'true') return;
+  // Only seed if the followups store is currently empty
+  const existing = safeGet<FollowUp>(KEYS.followups);
+  if (existing.length === 0) {
+    safeSet(KEYS.followups, followUpSeed);
+  }
+  localStorage.setItem(KEYS.seeded, 'true');
+}
 
 // ── Automations ───────────────────────────────────────
 
@@ -211,6 +230,12 @@ export function getDashboardStats() {
   const emails = emailStore.list();
   const jds = jdStore.list();
   const qas = qaStore.list();
+  const followUps = followUpStore.list();
+
+  const activeFollowUps = followUps.filter((f) => !f.resolved);
+  const urgentCount = activeFollowUps.filter(
+    (f) => f.category === 'urgent' || f.category === 'nudge'
+  ).length;
 
   return {
     tasksDueToday: tasks.filter((t) => {
@@ -223,7 +248,17 @@ export function getDashboardStats() {
     ).length,
     jdCount: jds.length,
     qaPending: qas.filter((q) => !q.summary).length,
+    followUpTotal: activeFollowUps.length,
+    followUpUrgent: urgentCount,
+    followUpNoFup: activeFollowUps.filter((f) => f.category === 'no_fup').length,
+    followUpActive: activeFollowUps.filter((f) => f.category === 'active').length,
     recentTasks: tasks.filter((t) => t.status !== 'done').slice(0, 5),
     recentEmails: emails.slice(0, 5),
+    recentFollowUps: activeFollowUps
+      .sort((a, b) => {
+        const order = { urgent: 0, nudge: 1, active: 2, no_fup: 3, fup_sent: 4, in_thread: 5, flagged: 6 };
+        return order[a.category] - order[b.category];
+      })
+      .slice(0, 8),
   };
 }
