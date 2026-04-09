@@ -1,16 +1,21 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { listJDs } from '@/actions/jds';
+import { jdStore, type JobDescription } from '@/lib/store';
 import { formatRelative } from '@/lib/utils';
 import { Plus, FileText, Building2 } from 'lucide-react';
 
-export const dynamic = 'force-dynamic';
+export default function JDsPage() {
+  const [jds, setJds] = useState<JobDescription[]>([]);
 
-export default async function JDsPage() {
-  const jds = await listJDs();
+  useEffect(() => {
+    setJds(jdStore.list());
+  }, []);
 
   return (
     <div className="p-6 lg:p-8 max-w-6xl">
@@ -30,9 +35,7 @@ export default async function JDsPage() {
         <Card>
           <CardContent className="py-16 text-center">
             <FileText size={36} className="mx-auto mb-3 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground mb-4">
-              No job descriptions yet.
-            </p>
+            <p className="text-sm text-muted-foreground mb-4">No job descriptions yet.</p>
             <Button asChild>
               <Link href="/jds/new">
                 <Plus size={14} /> Create your first JD

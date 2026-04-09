@@ -1,44 +1,45 @@
-import { notFound } from 'next/navigation';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import JDForm from '../JDForm';
-import { getJD, deleteJD } from '@/actions/jds';
+import { jdStore, type JobDescription } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
-import { redirect } from 'next/navigation';
 
-export const dynamic = 'force-dynamic';
+export default function EditJDPage() {
+  const params = useParams<{ id: string }>();
+  const router = useRouter();
+  const [jd, setJd] = useState<JobDescription | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
-export default async function EditJDPage({ params }: { params: { id: string } }) {
-  const jd = await getJD(params.id);
-  if (!jd) notFound();
+  useEffect(() => {
+    const found = jdStore.get(params.id);
+    setJd(found || null);
+    setLoaded(true);
+  }, [params.id]);
 
-  async function handleDelete() {
-    'use server';
-    await deleteJD(params.id);
-    redirect('/jds');
+  function handleDelete() {
+    if (!confirm('Delete this JD?')) return;
+    jdStore.delete(params.id);
+    router.push('/jds');
   }
+
+  if (!loaded) return <div className="p-8 text-sm text-muted-foreground">Loading...</div>;
+  if (!jd) return <div className="p-8 text-sm text-muted-foreground">JD not found.</div>;
 
   return (
     <div className="p-6 lg:p-8 max-w-3xl">
       <PageHeader
         title="Edit Job Description"
         action={
-          <form action={handleDelete}>
-            <Button variant="destructive" size="sm" type="submit">
-              <Trash2 size={12} /> Delete
-            </Button>
-          </form>
+          <Button variant="destructive" size="sm" onClick={handleDelete}>
+            <Trash2 size={12} /> Delete
+          </Button>
         }
       />
-      <JDForm
-        jd={{
-          id: jd.id,
-          title: jd.title,
-          company: jd.company,
-          seniority: jd.seniority,
-          description: jd.description,
-        }}
-      />
+      <JDForm jd={jd} />
     </div>
   );
 }

@@ -1,15 +1,13 @@
 # OpsOS — Recruiting Operations System
 
-Lean, production-ready internal tool for recruiting operations.
+Lean, personal internal tool for recruiting operations. **No database, no auth, no setup — just deploy and use.**
 
 ## Stack
 
 - Next.js 14 (App Router)
 - TypeScript
-- Tailwind CSS + shadcn/ui
-- Prisma ORM + PostgreSQL
-- Auth.js v5 (Google)
-- Server Actions (no API routes)
+- Tailwind CSS + shadcn/ui components
+- localStorage for data persistence
 
 ## Features
 
@@ -29,30 +27,37 @@ Lean, production-ready internal tool for recruiting operations.
 
 ```bash
 npm install
-cp .env.example .env   # fill in DATABASE_URL and AUTH_GOOGLE_* creds
-npx prisma migrate dev
 npm run dev
 ```
 
-Open http://localhost:3000.
+Open http://localhost:3000. That's it.
 
 ## Deploy to Vercel
 
 1. Push this repo to GitHub
 2. Import the repo on Vercel
-3. Add environment variables from `.env.example` (use Vercel Postgres for `DATABASE_URL`)
-4. Deploy — the build runs `prisma generate && next build` automatically
+3. Click Deploy
+
+No environment variables, no build command changes, no database setup. It just works.
+
+## Data Storage
+
+All data lives in your browser's localStorage. This means:
+- ✅ Zero infrastructure
+- ✅ Works offline
+- ✅ Instant deploys
+- ⚠️ Data is per-browser (doesn't sync across devices)
+
+If you ever need cross-device sync, swap `lib/store.ts` for a real backend (Supabase, Firebase, Prisma+Postgres, etc.) — the rest of the app won't need to change.
 
 ## AI Layer
 
-`lib/ai.ts` exposes three functions: `generateJD`, `generateEmail`, `summarizeQA`. They return deterministic mocks out of the box. To wire them to a real model, add `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` to your env and replace the mock bodies.
+`lib/ai.ts` exposes three functions: `generateJD`, `generateEmail`, `summarizeQA`. They return deterministic mocks out of the box. To wire them to a real model, add `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` and replace the mock bodies.
 
 ## Project Structure
 
 ```
-/app          — Next.js App Router pages
+/app          — Next.js App Router pages (all client components)
 /components   — UI components (shadcn-style in /ui, plus layout)
-/lib          — utils, db client, auth, AI layer
-/actions      — Server Actions grouped by entity
-/prisma       — schema.prisma
+/lib          — utils, localStorage store, AI layer
 ```
