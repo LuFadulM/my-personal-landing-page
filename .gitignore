@@ -2,6 +2,9 @@ node_modules/
 .next/
 out/
 .env
-.env.local
+.env*.local
 npm-debug.log*
 .vercel
+*.tsbuildinfo
+prisma/*.db
+prisma/*.db-journal
