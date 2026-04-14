@@ -1,44 +1,41 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { jds as seedJds, type JD } from '@/data/jds';
+import { jds as seedJds, functionColors, type JD } from '@/data/jds';
 import { getStorage, setStorage } from '@/lib/storage';
 import StatCard from './StatCard';
 import { Plus, Trash2, Edit3, X, Save, Search } from 'lucide-react';
 
-const KEY = 'cc_jds_v1';
+const KEY = 'cc_jds_v2';
 
 interface StoredJD extends JD {
   id: string;
   createdAt: string;
-  seeded?: boolean; // true if from data/jds.ts seed
+  seeded?: boolean;
 }
 
 function seedToStored(): StoredJD[] {
   return seedJds.map((j, i) => ({
     ...j,
     id: `seed-${i}`,
-    createdAt: new Date('2026-03-01').toISOString(),
+    createdAt: new Date('2026-04-01').toISOString(),
     seeded: true,
   }));
 }
 
 const empty: Omit<StoredJD, 'id' | 'createdAt'> = {
-  role: '', co: '', bounty: '—',
-  status: 'Draft', o1: 'Not Started', o2: 'Not Started', intro: 'Not Started', qa: false,
+  company: '', role: '', function: 'Engineering',
+  location: '', compensation: 'TBD', yoe: 'TBD', bounty: 'TBD', ats: 'Contrario',
+  status: 'Active',
 };
 
 const statusColors = {
-  Published: 'bg-healthy/15 text-healthy',
-  Draft: 'bg-attention/15 text-attention',
-  'In Review': 'bg-newrole/15 text-newrole',
+  Active: 'bg-healthy/15 text-healthy',
+  Complete: 'bg-border text-muted',
 };
 
-const outreachColors = {
-  Sent: 'bg-healthy/15 text-healthy',
-  Drafted: 'bg-attention/15 text-attention',
-  'Not Started': 'bg-border text-muted',
-};
+const functionOptions = ['Engineering', 'GTM', 'Sales', 'Ops', 'Design', 'Data / ML'];
+const atsOptions = ['Contrario', 'Ashby', 'Calendly', 'Lever', 'Other'];
 
 export default function JDTracker() {
   const [jds, setJds] = useState<StoredJD[]>([]);
@@ -46,12 +43,12 @@ export default function JDTracker() {
   const [editing, setEditing] = useState<StoredJD | null>(null);
   const [form, setForm] = useState<Omit<StoredJD, 'id' | 'createdAt'>>(empty);
   const [search, setSearch] = useState('');
+  const [fnFilter, setFnFilter] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<'All' | JD['status']>('All');
 
   useEffect(() => {
     const stored = getStorage<StoredJD[] | null>(KEY, null);
     if (stored === null) {
-      // First load — seed with hardcoded JDs
       const initial = seedToStored();
       setJds(initial);
       setStorage(KEY, initial);
@@ -74,15 +71,16 @@ export default function JDTracker() {
   function openEdit(jd: StoredJD) {
     setEditing(jd);
     setForm({
-      role: jd.role, co: jd.co, bounty: jd.bounty,
-      status: jd.status, o1: jd.o1, o2: jd.o2, intro: jd.intro, qa: jd.qa,
+      company: jd.company, role: jd.role, function: jd.function,
+      location: jd.location, compensation: jd.compensation, yoe: jd.yoe,
+      bounty: jd.bounty, ats: jd.ats, status: jd.status,
     });
     setShowForm(true);
   }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.role.trim() || !form.co.trim()) return;
+    if (!form.role.trim() || !form.company.trim()) return;
 
     if (editing) {
       persist(jds.map((j) => (j.id === editing.id ? { ...j, ...form } : j)));
@@ -105,34 +103,48 @@ export default function JDTracker() {
   }
 
   function resetSeed() {
-    if (!confirm('Reset JD list to the original 38 seeded entries? This deletes any you added manually.')) return;
-    const initial = seedToStored();
-    persist(initial);
+    if (!confirm('Reset JD list to the seeded entries? This deletes any you added manually.')) return;
+    persist(seedToStored());
   }
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return jds
+      .filter((j) => fnFilter === 'All' || j.function === fnFilter)
       .filter((j) => statusFilter === 'All' || j.status === statusFilter)
-      .filter((j) => !q || j.role.toLowerCase().includes(q) || j.co.toLowerCase().includes(q));
-  }, [jds, search, statusFilter]);
+      .filter((j) => !q ||
+        j.role.toLowerCase().includes(q) ||
+        j.company.toLowerCase().includes(q) ||
+        j.location.toLowerCase().includes(q)
+      );
+  }, [jds, search, fnFilter, statusFilter]);
 
-  const allComplete = jds.filter((j) => j.o1 === 'Sent' && j.o2 === 'Sent' && j.intro === 'Ready').length;
-  const qaComplete = jds.filter((j) => j.qa).length;
-  const drafts = jds.filter((j) => j.status === 'Draft').length;
-  const published = jds.filter((j) => j.status === 'Published').length;
+  const active = jds.filter((j) => j.status === 'Active').length;
+  const complete = jds.filter((j) => j.status === 'Complete').length;
+  const companies = Array.from(new Set(jds.map((j) => j.company))).length;
+  const byFunction = functionOptions.map((fn) => ({
+    fn,
+    count: jds.filter((j) => j.function === fn).length,
+  })).filter((x) => x.count > 0);
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label="Total JDs" value={jds.length} />
-        <StatCard label="Published" value={published} color="text-healthy" />
-        <StatCard label="Drafts" value={drafts} color="text-attention" />
-        <StatCard
-          label="All Outreach Done"
-          value={jds.length ? `${Math.round((allComplete / jds.length) * 100)}%` : '0%'}
-          color="text-healthy"
-        />
+        <StatCard label="Active" value={active} color="text-healthy" />
+        <StatCard label="Complete" value={complete} color="text-muted" />
+        <StatCard label="Companies" value={companies} color="text-accent" />
+      </div>
+
+      <div className="bg-card border border-border rounded-2xl p-4">
+        <p className="text-[10px] text-muted uppercase tracking-wider mb-2">By Function</p>
+        <div className="flex flex-wrap gap-2">
+          {byFunction.map(({ fn, count }) => (
+            <span key={fn} className={`${functionColors[fn] || 'bg-border text-muted'} text-xs px-2.5 py-1 rounded-full`}>
+              {fn} <b>{count}</b>
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -141,19 +153,26 @@ export default function JDTracker() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by role or company..."
+            placeholder="Search role, company, or location..."
             className="w-full bg-card border border-border rounded-full pl-8 pr-3 py-1.5 text-xs text-fg focus:border-accent focus:outline-none"
           />
         </div>
+        <select
+          value={fnFilter}
+          onChange={(e) => setFnFilter(e.target.value)}
+          className="bg-card border border-border rounded-full px-3 py-1.5 text-xs text-fg"
+        >
+          <option value="All">All Functions</option>
+          {functionOptions.map((fn) => <option key={fn} value={fn}>{fn}</option>)}
+        </select>
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as any)}
           className="bg-card border border-border rounded-full px-3 py-1.5 text-xs text-fg"
         >
-          <option value="All">All Statuses</option>
-          <option value="Draft">Draft</option>
-          <option value="In Review">In Review</option>
-          <option value="Published">Published</option>
+          <option value="All">All Status</option>
+          <option value="Active">Active</option>
+          <option value="Complete">Complete</option>
         </select>
         <button onClick={openNew} className="flex items-center gap-1 bg-accent/20 text-accent px-3 py-1.5 rounded-full text-xs font-medium hover:bg-accent/30">
           <Plus size={12} /> New JD
@@ -170,58 +189,67 @@ export default function JDTracker() {
           <form onSubmit={submit} className="space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <input
-                value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value })}
-                placeholder="Role title"
+                value={form.company}
+                onChange={(e) => setForm({ ...form, company: e.target.value })}
+                placeholder="Company"
                 required
                 autoFocus
                 className="bg-border/50 border border-border rounded-lg px-3 py-2 text-sm text-fg focus:border-accent focus:outline-none"
               />
               <input
-                value={form.co}
-                onChange={(e) => setForm({ ...form, co: e.target.value })}
-                placeholder="Company"
+                value={form.role}
+                onChange={(e) => setForm({ ...form, role: e.target.value })}
+                placeholder="Role title"
                 required
                 className="bg-border/50 border border-border rounded-lg px-3 py-2 text-sm text-fg focus:border-accent focus:outline-none"
               />
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <select
+                value={form.function}
+                onChange={(e) => setForm({ ...form, function: e.target.value })}
+                className="bg-border/50 border border-border rounded-lg px-3 py-2 text-sm text-fg"
+              >
+                {functionOptions.map((fn) => <option key={fn} value={fn}>{fn}</option>)}
+              </select>
+              <input
+                value={form.location}
+                onChange={(e) => setForm({ ...form, location: e.target.value })}
+                placeholder="Location (e.g. SF in-person, Remote LATAM)"
+                className="bg-border/50 border border-border rounded-lg px-3 py-2 text-sm text-fg focus:border-accent focus:outline-none"
+              />
+              <input
+                value={form.yoe}
+                onChange={(e) => setForm({ ...form, yoe: e.target.value })}
+                placeholder="YoE (e.g. 2-5, 5+, TBD)"
+                className="bg-border/50 border border-border rounded-lg px-3 py-2 text-sm text-fg focus:border-accent focus:outline-none"
+              />
+            </div>
+            <input
+              value={form.compensation}
+              onChange={(e) => setForm({ ...form, compensation: e.target.value })}
+              placeholder="Compensation (e.g. $150K-$200K / 0.5% equity)"
+              className="w-full bg-border/50 border border-border rounded-lg px-3 py-2 text-sm text-fg focus:border-accent focus:outline-none"
+            />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <input
                 value={form.bounty}
                 onChange={(e) => setForm({ ...form, bounty: e.target.value })}
-                placeholder="Bounty"
+                placeholder="Bounty %"
                 className="bg-border/50 border border-border rounded-lg px-3 py-2 text-sm text-fg focus:border-accent focus:outline-none"
               />
+              <select
+                value={form.ats}
+                onChange={(e) => setForm({ ...form, ats: e.target.value })}
+                className="bg-border/50 border border-border rounded-lg px-3 py-2 text-sm text-fg"
+              >
+                {atsOptions.map((a) => <option key={a} value={a}>{a}</option>)}
+              </select>
               <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as JD['status'] })} className="bg-border/50 border border-border rounded-lg px-3 py-2 text-sm text-fg">
-                <option value="Draft">Draft</option>
-                <option value="In Review">In Review</option>
-                <option value="Published">Published</option>
-              </select>
-              <select value={form.o1} onChange={(e) => setForm({ ...form, o1: e.target.value as JD['o1'] })} className="bg-border/50 border border-border rounded-lg px-3 py-2 text-sm text-fg">
-                <option value="Not Started">O1: Not Started</option>
-                <option value="Drafted">O1: Drafted</option>
-                <option value="Sent">O1: Sent</option>
-              </select>
-              <select value={form.o2} onChange={(e) => setForm({ ...form, o2: e.target.value as JD['o2'] })} className="bg-border/50 border border-border rounded-lg px-3 py-2 text-sm text-fg">
-                <option value="Not Started">O2: Not Started</option>
-                <option value="Drafted">O2: Drafted</option>
-                <option value="Sent">O2: Sent</option>
-              </select>
-              <select value={form.intro} onChange={(e) => setForm({ ...form, intro: e.target.value as JD['intro'] })} className="bg-border/50 border border-border rounded-lg px-3 py-2 text-sm text-fg">
-                <option value="Not Started">Intro: Not Started</option>
-                <option value="Drafted">Intro: Drafted</option>
-                <option value="Ready">Intro: Ready</option>
+                <option value="Active">Active</option>
+                <option value="Complete">Complete</option>
               </select>
             </div>
-            <label className="flex items-center gap-2 text-xs text-fg cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.qa}
-                onChange={(e) => setForm({ ...form, qa: e.target.checked })}
-                className="accent-accent"
-              />
-              QA completed
-            </label>
             <div className="flex gap-2">
               <button type="submit" className="flex items-center gap-1 bg-accent text-white px-4 py-2 rounded-lg text-xs font-medium hover:bg-accent/80">
                 <Save size={12} /> {editing ? 'Update' : 'Add'} JD
@@ -237,43 +265,41 @@ export default function JDTracker() {
           <table className="w-full text-xs">
             <thead className="border-b border-border">
               <tr>
+                <th className="px-3 py-2.5 text-left text-muted font-medium">Company</th>
                 <th className="px-3 py-2.5 text-left text-muted font-medium">Role</th>
-                <th className="px-3 py-2.5 text-left text-muted font-medium">Client</th>
+                <th className="px-3 py-2.5 text-left text-muted font-medium">Function</th>
+                <th className="px-3 py-2.5 text-left text-muted font-medium">Location</th>
+                <th className="px-3 py-2.5 text-left text-muted font-medium">Comp</th>
+                <th className="px-3 py-2.5 text-center text-muted font-medium">YoE</th>
                 <th className="px-3 py-2.5 text-center text-muted font-medium">Bounty</th>
+                <th className="px-3 py-2.5 text-center text-muted font-medium">ATS</th>
                 <th className="px-3 py-2.5 text-center text-muted font-medium">Status</th>
-                <th className="px-3 py-2.5 text-center text-muted font-medium">O1</th>
-                <th className="px-3 py-2.5 text-center text-muted font-medium">O2</th>
-                <th className="px-3 py-2.5 text-center text-muted font-medium">Intro</th>
-                <th className="px-3 py-2.5 text-center text-muted font-medium">QA</th>
                 <th className="px-3 py-2.5 text-right text-muted font-medium">Actions</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-muted text-xs">
+                  <td colSpan={10} className="text-center py-12 text-muted text-xs">
                     No JDs match the filters.
                   </td>
                 </tr>
               ) : filtered.map((j) => (
                 <tr key={j.id} className="border-b border-border/30 hover:bg-border/20">
-                  <td className="px-3 py-2.5 font-medium text-fg">{j.role}</td>
-                  <td className="px-3 py-2.5 text-muted">{j.co}</td>
+                  <td className="px-3 py-2.5 font-medium text-fg whitespace-nowrap">{j.company}</td>
+                  <td className="px-3 py-2.5 text-fg">{j.role}</td>
+                  <td className="px-3 py-2.5">
+                    <span className={`${functionColors[j.function] || 'bg-border text-muted'} text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap`}>
+                      {j.function}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5 text-muted text-[11px]">{j.location}</td>
+                  <td className="px-3 py-2.5 text-muted text-[11px] max-w-[180px] truncate" title={j.compensation}>{j.compensation}</td>
+                  <td className="px-3 py-2.5 text-center text-muted font-mono">{j.yoe}</td>
                   <td className="px-3 py-2.5 text-center text-muted font-mono">{j.bounty}</td>
+                  <td className="px-3 py-2.5 text-center text-muted text-[11px]">{j.ats}</td>
                   <td className="px-3 py-2.5 text-center">
                     <span className={`${statusColors[j.status]} text-[10px] px-2 py-0.5 rounded-full`}>{j.status}</span>
-                  </td>
-                  <td className="px-3 py-2.5 text-center">
-                    <span className={`${outreachColors[j.o1]} text-[10px] px-2 py-0.5 rounded-full`}>{j.o1}</span>
-                  </td>
-                  <td className="px-3 py-2.5 text-center">
-                    <span className={`${outreachColors[j.o2]} text-[10px] px-2 py-0.5 rounded-full`}>{j.o2}</span>
-                  </td>
-                  <td className="px-3 py-2.5 text-center">
-                    <span className={`${outreachColors[j.intro === 'Ready' ? 'Sent' : j.intro]} text-[10px] px-2 py-0.5 rounded-full`}>{j.intro}</span>
-                  </td>
-                  <td className="px-3 py-2.5 text-center">
-                    {j.qa ? <span className="text-healthy">&#10003;</span> : <span className="text-muted">—</span>}
                   </td>
                   <td className="px-3 py-2.5 text-right">
                     <div className="flex items-center justify-end gap-1">
@@ -292,7 +318,7 @@ export default function JDTracker() {
         </div>
       </div>
       <p className="text-[10px] text-muted text-center">
-        Showing {filtered.length} of {jds.length} JDs · {qaComplete} QA'd
+        Showing {filtered.length} of {jds.length} JDs across {companies} companies
       </p>
     </div>
   );

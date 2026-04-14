@@ -10,7 +10,7 @@ import { getStorage, setStorage } from '@/lib/storage';
 import { FileText, Mail, Target, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 
 const CHECKLIST_KEY = 'cc_checklist';
-const JDS_KEY = 'cc_jds_v1';
+const JDS_KEY = 'cc_jds_v2';
 const KPI_KEY = 'cc_kpi_values';
 const LOG_KEY = 'cc_error_log';
 
@@ -63,10 +63,10 @@ export default function Overview() {
   }
 
   // JD stats
-  const published = jds.filter((j) => j.status === 'Published').length;
-  const drafts = jds.filter((j) => j.status === 'Draft').length;
-  const allComplete = jds.filter((j) => j.o1 === 'Sent' && j.o2 === 'Sent' && j.intro === 'Ready').length;
-  const qaCount = jds.filter((j) => j.qa).length;
+  const active = jds.filter((j) => j.status === 'Active').length;
+  const complete = jds.filter((j) => j.status === 'Complete').length;
+  const companies = Array.from(new Set(jds.map((j) => j.company))).length;
+  const engineering = jds.filter((j) => j.function === 'Engineering').length;
 
   // Email stats
   const emailsEnriched = introEmails.map((e) => ({
@@ -90,14 +90,14 @@ export default function Overview() {
   }).length;
 
   // Upcoming action items
-  const jdsNeedAttention = jds.filter((j) => j.status === 'Draft' || j.o1 === 'Not Started' || j.o2 === 'Not Started' || j.intro === 'Not Started');
+  const jdsWithTBDComp = jds.filter((j) => j.status === 'Active' && (j.compensation === 'TBD' || j.bounty === 'TBD'));
   const emailsNeedFU = emailsEnriched.filter((e) => !e.replied && e.fu1Due).slice(0, 5);
 
   return (
     <div className="space-y-6">
       {/* Primary stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="JDs Drafted" value={jds.length} color="text-accent" sub={`${published} published · ${drafts} drafts`} />
+        <StatCard label="JDs Drafted" value={jds.length} color="text-accent" sub={`${active} active · ${complete} complete`} />
         <StatCard label="Response Rate" value={`${responseRate}%`} color={responseRate > 25 ? 'text-healthy' : 'text-attention'} sub={`${repliedCount}/${totalEmails} emails replied`} />
         <StatCard label="KPIs On Track" value={`${kpisOnTrack}/${kpis.length}`} color="text-healthy" sub={`${kpisMeasured} measured so far`} />
         <StatCard label="Open Issues" value={openIssues} color={openIssues > 0 ? 'text-attention' : 'text-healthy'} sub="From Error Log" />
@@ -112,18 +112,18 @@ export default function Overview() {
           </div>
           <div className="space-y-2 text-xs">
             <Row label="Total JDs" value={jds.length} />
-            <Row label="Published" value={published} color="text-healthy" />
-            <Row label="Still drafts" value={drafts} color="text-attention" />
-            <Row label="All outreach complete" value={`${allComplete} (${jds.length ? Math.round(allComplete / jds.length * 100) : 0}%)`} color="text-healthy" />
-            <Row label="QA complete" value={`${qaCount} (${jds.length ? Math.round(qaCount / jds.length * 100) : 0}%)`} color="text-healthy" />
+            <Row label="Active" value={active} color="text-healthy" />
+            <Row label="Complete" value={complete} color="text-muted" />
+            <Row label="Companies" value={companies} color="text-accent" />
+            <Row label="Engineering roles" value={engineering} color="text-newrole" />
           </div>
-          {jdsNeedAttention.length > 0 && (
+          {jdsWithTBDComp.length > 0 && (
             <div className="mt-4 pt-3 border-t border-border">
-              <p className="text-[10px] text-attention uppercase tracking-wider mb-2">Needs Attention ({jdsNeedAttention.length})</p>
+              <p className="text-[10px] text-attention uppercase tracking-wider mb-2">Missing Comp or Bounty ({jdsWithTBDComp.length})</p>
               <div className="space-y-1">
-                {jdsNeedAttention.slice(0, 3).map((j, i) => (
+                {jdsWithTBDComp.slice(0, 3).map((j, i) => (
                   <div key={i} className="text-[11px] text-muted truncate">
-                    <span className="text-fg">{j.role}</span> — {j.co}
+                    <span className="text-fg">{j.role}</span> — {j.company}
                   </div>
                 ))}
               </div>
