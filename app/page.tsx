@@ -10,6 +10,7 @@ import {
   ClipboardList,
   Users,
   AlertTriangle,
+  Inbox,
 } from 'lucide-react';
 import Overview from '@/components/Overview';
 import RoleHealth from '@/components/RoleHealth';
@@ -19,13 +20,15 @@ import KPIs from '@/components/KPIs';
 import WeeklyReport from '@/components/WeeklyReport';
 import Candidates from '@/components/Candidates';
 import ErrorLog from '@/components/ErrorLog';
+import DailyScan from '@/components/DailyScan';
 
-type Tab = 'overview' | 'health' | 'emails' | 'jds' | 'kpis' | 'report' | 'candidates' | 'errorlog';
+type Tab = 'overview' | 'health' | 'emails' | 'scan' | 'jds' | 'kpis' | 'report' | 'candidates' | 'errorlog';
 
 const tabs: { id: Tab; label: string; icon: typeof LayoutDashboard; badge?: number }[] = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'health', label: 'Role Health', icon: HeartPulse, badge: 47 },
   { id: 'emails', label: 'Intro Emails', icon: Mail, badge: 131 },
+  { id: 'scan', label: 'Daily Scan', icon: Inbox },
   { id: 'jds', label: 'JD Tracker', icon: FileText, badge: 38 },
   { id: 'kpis', label: 'KPIs', icon: Target },
   { id: 'report', label: 'Weekly Report', icon: ClipboardList },
@@ -41,6 +44,7 @@ export default function Home() {
       case 'overview': return <Overview />;
       case 'health': return <RoleHealth />;
       case 'emails': return <IntroEmails />;
+      case 'scan': return <DailyScan />;
       case 'jds': return <JDTracker />;
       case 'kpis': return <KPIs />;
       case 'report': return <WeeklyReport />;

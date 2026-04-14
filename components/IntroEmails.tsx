@@ -1,17 +1,75 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { introEmails } from '@/data/emails';
+import { useEffect, useMemo, useState } from 'react';
+import { introEmails, type IntroEmail } from '@/data/emails';
 import { addBusinessDays, formatDate, daysBetween, REF_DATE, isOverdue } from '@/lib/dateUtils';
+import { fetchSheetCSV } from '@/lib/sheetFetch';
+import { getStorage, setStorage } from '@/lib/storage';
 import StatCard from './StatCard';
+import { RefreshCw, Settings, Check, Link2, Loader2 } from 'lucide-react';
+
+const SHEET_URL_KEY = 'cc_sheet_url';
+const SHEET_DATA_KEY = 'cc_sheet_data';
+const SHEET_UPDATED_KEY = 'cc_sheet_updated';
 
 export default function IntroEmails() {
   const [filter, setFilter] = useState<'all' | 'no-reply' | 'overdue'>('all');
   const [clientFilter, setClientFilter] = useState('All');
   const [sort, setSort] = useState<'date' | 'days' | 'fu'>('date');
+  const [showSettings, setShowSettings] = useState(false);
+  const [sheetUrl, setSheetUrl] = useState('');
+  const [liveData, setLiveData] = useState<IntroEmail[] | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string>('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>('');
+
+  useEffect(() => {
+    const url = getStorage<string>(SHEET_URL_KEY, '');
+    setSheetUrl(url);
+    const cached = getStorage<IntroEmail[] | null>(SHEET_DATA_KEY, null);
+    if (cached && cached.length > 0) setLiveData(cached);
+    setLastUpdated(getStorage<string>(SHEET_UPDATED_KEY, ''));
+  }, []);
+
+  async function refresh() {
+    if (!sheetUrl) {
+      setError('Paste a Google Sheet CSV URL in settings first.');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    try {
+      const data = await fetchSheetCSV(sheetUrl);
+      if (data.length === 0) throw new Error('No rows found in sheet.');
+      setLiveData(data);
+      setStorage(SHEET_DATA_KEY, data);
+      const now = new Date().toLocaleString();
+      setLastUpdated(now);
+      setStorage(SHEET_UPDATED_KEY, now);
+    } catch (err: any) {
+      setError(err.message || 'Fetch failed. Make sure the sheet is published to web as CSV.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function saveUrl() {
+    setStorage(SHEET_URL_KEY, sheetUrl);
+    setShowSettings(false);
+  }
+
+  function clearLive() {
+    setLiveData(null);
+    setStorage(SHEET_DATA_KEY, null);
+    setLastUpdated('');
+    setStorage(SHEET_UPDATED_KEY, '');
+  }
+
+  const source = liveData || introEmails;
+  const isLive = liveData !== null;
 
   const enriched = useMemo(() => {
-    return introEmails.map((e, i) => {
+    return source.map((e, i) => {
       const days = daysBetween(e.date, REF_DATE);
       const fu1 = addBusinessDays(e.date, 3);
       const fu2 = addBusinessDays(e.date, 6);
@@ -29,17 +87,17 @@ export default function IntroEmails() {
 
       return { ...e, idx: i + 1, days, fu1, fu2, fu3, fu1Due, fu2Due, fu3Due, replied, overdueFUs, fuStatus };
     });
-  }, []);
+  }, [source]);
 
   const clients = useMemo(() => {
-    const set = new Set(introEmails.map((e) => e.co));
+    const set = new Set(source.map((e) => e.co));
     return ['All', ...Array.from(set).sort()];
-  }, []);
+  }, [source]);
 
   const totalReplied = enriched.filter((e) => e.replied).length;
   const totalNoReply = enriched.filter((e) => !e.replied).length;
   const totalOverdue = enriched.filter((e) => !e.replied && e.overdueFUs > 0).length;
-  const responseRate = Math.round((totalReplied / enriched.length) * 100);
+  const responseRate = enriched.length ? Math.round((totalReplied / enriched.length) * 100) : 0;
 
   const filtered = useMemo(() => {
     let data = enriched;
@@ -55,6 +113,72 @@ export default function IntroEmails() {
 
   return (
     <div className="space-y-4">
+      {/* Source banner */}
+      <div className={`flex items-center justify-between rounded-2xl border px-4 py-2.5 text-xs ${
+        isLive ? 'border-healthy/30 bg-healthy/5' : 'border-border bg-card'
+      }`}>
+        <div className="flex items-center gap-2">
+          <Link2 size={12} className={isLive ? 'text-healthy' : 'text-muted'} />
+          <span className={isLive ? 'text-healthy' : 'text-muted'}>
+            {isLive ? `Live from Google Sheet · Updated ${lastUpdated}` : 'Using static seed data (131 emails)'}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {sheetUrl && (
+            <button
+              onClick={refresh}
+              disabled={loading}
+              className="flex items-center gap-1 text-muted hover:text-fg"
+            >
+              {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+              {loading ? 'Fetching...' : 'Refresh'}
+            </button>
+          )}
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="flex items-center gap-1 text-muted hover:text-fg"
+          >
+            <Settings size={12} /> Settings
+          </button>
+        </div>
+      </div>
+
+      {error && <div className="bg-risk/10 border border-risk/30 text-risk text-xs px-3 py-2 rounded-lg">{error}</div>}
+
+      {showSettings && (
+        <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+          <div>
+            <label className="text-[10px] text-muted uppercase tracking-wider">Google Sheet Published CSV URL</label>
+            <p className="text-[11px] text-muted mt-1 mb-2">
+              In Google Sheets: <b className="text-fg">File &rarr; Share &rarr; Publish to web</b>, select the tab, choose "Comma-separated values (.csv)", click <b className="text-fg">Publish</b>, then paste the URL here.
+            </p>
+            <input
+              value={sheetUrl}
+              onChange={(e) => setSheetUrl(e.target.value)}
+              placeholder="https://docs.google.com/spreadsheets/d/e/.../pub?output=csv"
+              className="w-full bg-border/50 border border-border rounded-lg px-3 py-2 text-xs text-fg font-mono focus:border-accent focus:outline-none"
+            />
+          </div>
+          <p className="text-[10px] text-muted">
+            Expected columns: A=Candidate, B=Email, C=Company, D=Role, E=Intro Date, F=Days Since, G=Replied?, ...
+          </p>
+          <div className="flex gap-2">
+            <button onClick={saveUrl} className="flex items-center gap-1 bg-accent text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-accent/80">
+              <Check size={12} /> Save URL
+            </button>
+            <button onClick={refresh} disabled={loading || !sheetUrl} className="flex items-center gap-1 bg-healthy/20 text-healthy px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-healthy/30 disabled:opacity-50">
+              {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+              Fetch Now
+            </button>
+            {liveData && (
+              <button onClick={clearLive} className="text-muted hover:text-risk text-xs">
+                Clear live data (use seed)
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <StatCard label="Total Sent" value={enriched.length} />
         <StatCard label="Replied" value={totalReplied} color="text-healthy" />
