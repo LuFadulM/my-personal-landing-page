@@ -2,176 +2,65 @@
 @tailwind components;
 @tailwind utilities;
 
-/*
- * Grift font family — self-hosted.
- * Drop your .woff2 files into /public/fonts/ with the filenames below.
- * If missing, the browser silently falls back to Outfit / system-ui.
- * See /public/fonts/README.md for details.
- */
-@font-face {
-  font-family: 'Grift';
-  font-style: normal;
-  font-weight: 100;
-  font-display: swap;
-  src: url('/fonts/Grift-Thin.woff2') format('woff2'),
-       url('/fonts/Grift-Thin.woff') format('woff');
-}
-@font-face {
-  font-family: 'Grift';
-  font-style: italic;
-  font-weight: 100;
-  font-display: swap;
-  src: url('/fonts/Grift-ThinItalic.woff2') format('woff2'),
-       url('/fonts/Grift-ThinItalic.woff') format('woff');
-}
-@font-face {
-  font-family: 'Grift';
-  font-style: normal;
-  font-weight: 200;
-  font-display: swap;
-  src: url('/fonts/Grift-ExtraLight.woff2') format('woff2'),
-       url('/fonts/Grift-ExtraLight.woff') format('woff');
-}
-@font-face {
-  font-family: 'Grift';
-  font-style: italic;
-  font-weight: 200;
-  font-display: swap;
-  src: url('/fonts/Grift-ExtraLightItalic.woff2') format('woff2'),
-       url('/fonts/Grift-ExtraLightItalic.woff') format('woff');
-}
-@font-face {
-  font-family: 'Grift';
-  font-style: normal;
-  font-weight: 300;
-  font-display: swap;
-  src: url('/fonts/Grift-Light.woff2') format('woff2'),
-       url('/fonts/Grift-Light.woff') format('woff');
-}
-@font-face {
-  font-family: 'Grift';
-  font-style: italic;
-  font-weight: 300;
-  font-display: swap;
-  src: url('/fonts/Grift-LightItalic.woff2') format('woff2'),
-       url('/fonts/Grift-LightItalic.woff') format('woff');
-}
-@font-face {
-  font-family: 'Grift';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/Grift-Regular.woff2') format('woff2'),
-       url('/fonts/Grift-Regular.woff') format('woff');
-}
-@font-face {
-  font-family: 'Grift';
-  font-style: italic;
-  font-weight: 400;
-  font-display: swap;
-  src: url('/fonts/Grift-Italic.woff2') format('woff2'),
-       url('/fonts/Grift-Italic.woff') format('woff');
-}
-@font-face {
-  font-family: 'Grift';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/fonts/Grift-Medium.woff2') format('woff2'),
-       url('/fonts/Grift-Medium.woff') format('woff');
-}
-@font-face {
-  font-family: 'Grift';
-  font-style: italic;
-  font-weight: 500;
-  font-display: swap;
-  src: url('/fonts/Grift-MediumItalic.woff2') format('woff2'),
-       url('/fonts/Grift-MediumItalic.woff') format('woff');
-}
-@font-face {
-  font-family: 'Grift';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/fonts/Grift-SemiBold.woff2') format('woff2'),
-       url('/fonts/Grift-SemiBold.woff') format('woff');
-}
-@font-face {
-  font-family: 'Grift';
-  font-style: italic;
-  font-weight: 600;
-  font-display: swap;
-  src: url('/fonts/Grift-SemiBoldItalic.woff2') format('woff2'),
-       url('/fonts/Grift-SemiBoldItalic.woff') format('woff');
-}
-@font-face {
-  font-family: 'Grift';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/Grift-Bold.woff2') format('woff2'),
-       url('/fonts/Grift-Bold.woff') format('woff');
-}
-@font-face {
-  font-family: 'Grift';
-  font-style: italic;
-  font-weight: 700;
-  font-display: swap;
-  src: url('/fonts/Grift-BoldItalic.woff2') format('woff2'),
-       url('/fonts/Grift-BoldItalic.woff') format('woff');
-}
-@font-face {
-  font-family: 'Grift';
-  font-style: normal;
-  font-weight: 800;
-  font-display: swap;
-  src: url('/fonts/Grift-ExtraBold.woff2') format('woff2'),
-       url('/fonts/Grift-ExtraBold.woff') format('woff');
-}
-@font-face {
-  font-family: 'Grift';
-  font-style: italic;
-  font-weight: 800;
-  font-display: swap;
-  src: url('/fonts/Grift-ExtraBoldItalic.woff2') format('woff2'),
-       url('/fonts/Grift-ExtraBoldItalic.woff') format('woff');
-}
-@font-face {
-  font-family: 'Grift';
-  font-style: normal;
-  font-weight: 900;
-  font-display: swap;
-  src: url('/fonts/Grift-Black.woff2') format('woff2'),
-       url('/fonts/Grift-Black.woff') format('woff');
-}
-@font-face {
-  font-family: 'Grift';
-  font-style: italic;
-  font-weight: 900;
-  font-display: swap;
-  src: url('/fonts/Grift-BlackItalic.woff2') format('woff2'),
-       url('/fonts/Grift-BlackItalic.woff') format('woff');
-}
-
-/* Grift Variable (single file covering all weights 100-900) */
-@font-face {
-  font-family: 'Grift Variable';
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: swap;
-  src: url('/fonts/Grift-Variable.woff2') format('woff2-variations'),
-       url('/fonts/Grift-Variable.woff2') format('woff2');
-}
-
 @layer base {
-  html { font-size: 16px; }
-  body {
-    font-family: 'Grift', 'Grift Variable', 'Outfit', system-ui, sans-serif;
-    font-size: 17px;
-    line-height: 1.5;
+  :root {
+    /* Dark (default) — warm charcoal + gold */
+    --bg: 15 15 18;
+    --surface: 26 26 34;
+    --elevated: 35 35 48;
+    --border: 46 46 58;
+    --fg: 240 237 232;
+    --muted: 138 138 154;
+    --gold: 232 200 114;
+    --success: 91 185 140;
+    --warning: 232 168 56;
+    --danger: 212 84 78;
+    --info: 107 159 212;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  .light {
+    --bg: 250 248 245;
+    --surface: 255 255 255;
+    --elevated: 247 244 240;
+    --border: 229 226 221;
+    --fg: 28 28 34;
+    --muted: 110 110 125;
+    --gold: 191 156 70;
+    --success: 52 152 107;
+    --warning: 203 141 38;
+    --danger: 196 68 62;
+    --info: 74 130 186;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; border-color: rgb(var(--border)); }
+  body {
+    background: rgb(var(--bg));
+    color: rgb(var(--fg));
+    font-family: 'DM Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #1c1c22; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb { background: rgb(var(--border)); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgb(var(--elevated)); }
+}
+
+@layer components {
+  .card {
+    @apply bg-surface border border-border rounded-2xl;
+  }
+  .card-elevated {
+    @apply bg-elevated border border-border rounded-2xl;
+  }
+  .btn-primary {
+    @apply bg-gold text-black rounded-full px-4 py-2 text-sm font-medium transition-all hover:opacity-90 hover:scale-[1.01];
+  }
+  .btn-secondary {
+    @apply bg-surface border border-border text-fg rounded-full px-4 py-2 text-sm font-medium transition-all hover:border-gold/50;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+  .dot {
+    @apply inline-block w-1.5 h-1.5 rounded-full;
+  }
 }

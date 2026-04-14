@@ -3,8 +3,5 @@ node_modules/
 out/
 .env
 .env*.local
-npm-debug.log*
-.vercel
 *.tsbuildinfo
-prisma/*.db
-prisma/*.db-journal
+.vercel
