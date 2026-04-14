@@ -2,12 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import StatCard from './StatCard';
-import DonutChart from './DonutChart';
-import { atRiskRoles } from '@/data/roles';
-import { FlagBadge } from './Badge';
+import { jds as seedJds, type JD } from '@/data/jds';
+import { introEmails } from '@/data/emails';
+import { kpis } from '@/data/kpis';
+import { daysBetween, REF_DATE, addBusinessDays, isOverdue } from '@/lib/dateUtils';
 import { getStorage, setStorage } from '@/lib/storage';
+import { FileText, Mail, Target, AlertTriangle, CheckCircle2, Clock } from 'lucide-react';
 
 const CHECKLIST_KEY = 'cc_checklist';
+const JDS_KEY = 'cc_jds_v1';
+const KPI_KEY = 'cc_kpi_values';
+const LOG_KEY = 'cc_error_log';
+
 const checklistItems = [
   'Check #operations for new @mentions',
   'Check all client channels for updates',
@@ -23,17 +29,30 @@ const checklistItems = [
   'Final check on intro email delivery',
 ];
 
+interface StoredJD extends JD {
+  id: string;
+  createdAt: string;
+  seeded?: boolean;
+}
+
 export default function Overview() {
   const [checks, setChecks] = useState<boolean[]>([]);
+  const [jds, setJds] = useState<StoredJD[]>([]);
+  const [kpiValues, setKpiValues] = useState<Record<string, string>>({});
+  const [openIssues, setOpenIssues] = useState(0);
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
     const saved = getStorage<{ date: string; items: boolean[] }>(CHECKLIST_KEY, { date: '', items: [] });
-    if (saved.date === today) {
-      setChecks(saved.items);
-    } else {
-      setChecks(new Array(checklistItems.length).fill(false));
-    }
+    if (saved.date === today) setChecks(saved.items);
+    else setChecks(new Array(checklistItems.length).fill(false));
+
+    const storedJDs = getStorage<StoredJD[] | null>(JDS_KEY, null);
+    setJds(storedJDs || seedJds.map((j, i) => ({ ...j, id: `seed-${i}`, createdAt: '', seeded: true })));
+
+    setKpiValues(getStorage(KPI_KEY, {}));
+    const log = getStorage<Array<{ status: string }>>(LOG_KEY, []);
+    setOpenIssues(log.filter((e) => e.status !== 'Fixed').length);
   }, []);
 
   function toggle(i: number) {
@@ -43,79 +62,129 @@ export default function Overview() {
     setStorage(CHECKLIST_KEY, { date: new Date().toISOString().split('T')[0], items: next });
   }
 
-  const healthy = 49, na = 17, ar = 30, nr = 14, total = 110;
-  const segments = [
-    { value: healthy, color: '#10b981', label: 'Healthy' },
-    { value: na, color: '#f59e0b', label: 'Needs Attention' },
-    { value: ar, color: '#ef4444', label: 'At Risk' },
-    { value: nr, color: '#3b82f6', label: 'New' },
-  ];
+  // JD stats
+  const published = jds.filter((j) => j.status === 'Published').length;
+  const drafts = jds.filter((j) => j.status === 'Draft').length;
+  const allComplete = jds.filter((j) => j.o1 === 'Sent' && j.o2 === 'Sent' && j.intro === 'Ready').length;
+  const qaCount = jds.filter((j) => j.qa).length;
 
-  const topRisk = atRiskRoles.slice(0, 5);
+  // Email stats
+  const emailsEnriched = introEmails.map((e) => ({
+    ...e,
+    days: daysBetween(e.date, REF_DATE),
+    fu1Due: !e.replied && isOverdue(addBusinessDays(e.date, 3)),
+  }));
+  const totalEmails = emailsEnriched.length;
+  const repliedCount = emailsEnriched.filter((e) => e.replied).length;
+  const overdueFU = emailsEnriched.filter((e) => !e.replied && e.fu1Due).length;
+  const responseRate = Math.round((repliedCount / totalEmails) * 100);
+
+  // KPI stats
+  const kpisMeasured = kpis.filter((k) => kpiValues[k.id]).length;
+  const kpisOnTrack = kpis.filter((k) => {
+    const cur = kpiValues[k.id];
+    if (!cur) return false;
+    const tgt = parseFloat(k.target.replace(/[><%]/g, ''));
+    const curN = parseFloat(cur.replace(/[%]/g, ''));
+    return !isNaN(curN) && curN >= tgt;
+  }).length;
+
+  // Upcoming action items
+  const jdsNeedAttention = jds.filter((j) => j.status === 'Draft' || j.o1 === 'Not Started' || j.o2 === 'Not Started' || j.intro === 'Not Started');
+  const emailsNeedFU = emailsEnriched.filter((e) => !e.replied && e.fu1Due).slice(0, 5);
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <StatCard label="Healthy" value={healthy} color="text-healthy" />
-        <StatCard label="Needs Attention" value={na} color="text-attention" />
-        <StatCard label="At Risk" value={ar} color="text-risk" />
-        <StatCard label="New Role" value={nr} color="text-newrole" />
-        <StatCard label="Total Active" value={total} />
-        <StatCard label="For Review" value={42} color="text-accent" />
+      {/* Primary stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard label="JDs Drafted" value={jds.length} color="text-accent" sub={`${published} published · ${drafts} drafts`} />
+        <StatCard label="Response Rate" value={`${responseRate}%`} color={responseRate > 25 ? 'text-healthy' : 'text-attention'} sub={`${repliedCount}/${totalEmails} emails replied`} />
+        <StatCard label="KPIs On Track" value={`${kpisOnTrack}/${kpis.length}`} color="text-healthy" sub={`${kpisMeasured} measured so far`} />
+        <StatCard label="Open Issues" value={openIssues} color={openIssues > 0 ? 'text-attention' : 'text-healthy'} sub="From Error Log" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="text-sm font-semibold mb-4">Health Distribution</h3>
-          <DonutChart segments={segments} />
-        </div>
-
-        <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="text-sm font-semibold mb-3">Health Gap Analysis</h3>
-          <div className="space-y-4 text-sm">
-            <div>
-              <p className="text-muted text-xs">Current healthy %</p>
-              <p className="text-2xl font-bold text-attention">44.5%</p>
-              <p className="text-xs text-muted">Target: &gt;60% — need {Math.ceil(total * 0.6) - healthy} more roles healthy</p>
-            </div>
-            <div>
-              <p className="text-muted text-xs">Current at-risk %</p>
-              <p className="text-2xl font-bold text-risk">27.3%</p>
-              <p className="text-xs text-muted">Target: &lt;20% — need {ar - Math.floor(total * 0.2)} roles recovered</p>
-            </div>
-            <div className="pt-2 border-t border-border">
-              <p className="text-muted text-xs">Pipeline Snapshot</p>
-              <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
-                <span>Candidate Alerts: <b className="text-fg">472</b></span>
-                <span>Onsites: <b className="text-fg">2</b></span>
-                <span>Bonuses: <b className="text-fg">5</b></span>
-                <span>Agency Assign: <b className="text-fg">26</b></span>
+        {/* JD summary */}
+        <div className="bg-card border border-border rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <FileText size={14} className="text-accent" />
+            <h3 className="text-sm font-semibold">JD Tracker</h3>
+          </div>
+          <div className="space-y-2 text-xs">
+            <Row label="Total JDs" value={jds.length} />
+            <Row label="Published" value={published} color="text-healthy" />
+            <Row label="Still drafts" value={drafts} color="text-attention" />
+            <Row label="All outreach complete" value={`${allComplete} (${jds.length ? Math.round(allComplete / jds.length * 100) : 0}%)`} color="text-healthy" />
+            <Row label="QA complete" value={`${qaCount} (${jds.length ? Math.round(qaCount / jds.length * 100) : 0}%)`} color="text-healthy" />
+          </div>
+          {jdsNeedAttention.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-border">
+              <p className="text-[10px] text-attention uppercase tracking-wider mb-2">Needs Attention ({jdsNeedAttention.length})</p>
+              <div className="space-y-1">
+                {jdsNeedAttention.slice(0, 3).map((j, i) => (
+                  <div key={i} className="text-[11px] text-muted truncate">
+                    <span className="text-fg">{j.role}</span> — {j.co}
+                  </div>
+                ))}
               </div>
             </div>
-          </div>
+          )}
         </div>
 
-        <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="text-sm font-semibold mb-3">Top 5 At Risk</h3>
-          <div className="space-y-2.5">
-            {topRisk.map((r, i) => (
-              <div key={i} className="flex items-center justify-between text-xs">
-                <div className="min-w-0 flex-1">
-                  <p className="text-fg font-medium truncate">{r.role}</p>
-                  <p className="text-muted truncate">{r.co} — {r.rec} recruiters, {r.pend} pending</p>
-                </div>
-                <div className="flex gap-1 shrink-0 ml-2">
-                  {r.flags.map((f) => <FlagBadge key={f} flag={f} />)}
-                </div>
-              </div>
-            ))}
+        {/* Email summary */}
+        <div className="bg-card border border-border rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Mail size={14} className="text-accent" />
+            <h3 className="text-sm font-semibold">Intro Emails</h3>
           </div>
+          <div className="space-y-2 text-xs">
+            <Row label="Total sent (14d)" value={totalEmails} />
+            <Row label="Replied" value={repliedCount} color="text-healthy" />
+            <Row label="Overdue follow-ups" value={overdueFU} color="text-risk" />
+            <Row label="Response rate" value={`${responseRate}%`} color={responseRate > 25 ? 'text-healthy' : 'text-attention'} />
+          </div>
+          {emailsNeedFU.length > 0 && (
+            <div className="mt-4 pt-3 border-t border-border">
+              <p className="text-[10px] text-risk uppercase tracking-wider mb-2 flex items-center gap-1">
+                <Clock size={10} /> Follow Up Today ({emailsNeedFU.length}+)
+              </p>
+              <div className="space-y-1">
+                {emailsNeedFU.map((e, i) => (
+                  <div key={i} className="text-[11px] text-muted truncate">
+                    <span className="text-fg">{e.name}</span> — {e.co} <span className="text-risk">({e.days}d)</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* KPI snapshot */}
+        <div className="bg-card border border-border rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Target size={14} className="text-accent" />
+            <h3 className="text-sm font-semibold">KPI Snapshot</h3>
+          </div>
+          <div className="space-y-2 text-xs">
+            <Row label="Measured" value={`${kpisMeasured}/${kpis.length}`} />
+            <Row label="On track" value={kpisOnTrack} color="text-healthy" />
+            <Row label="Behind target" value={kpisMeasured - kpisOnTrack} color="text-risk" />
+            <Row label="Not yet measured" value={kpis.length - kpisMeasured} color="text-muted" />
+          </div>
+          {kpisMeasured === 0 && (
+            <div className="mt-4 pt-3 border-t border-border">
+              <p className="text-[11px] text-muted">Head to the KPIs tab to log this week's values.</p>
+            </div>
+          )}
         </div>
       </div>
 
+      {/* Morning checklist */}
       <div className="bg-card border border-border rounded-2xl p-6">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold">Morning Checklist</h3>
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <CheckCircle2 size={14} className="text-accent" /> Morning Checklist
+          </h3>
           <span className="text-xs text-muted">
             {checks.filter(Boolean).length}/{checklistItems.length}
           </span>
@@ -139,6 +208,15 @@ export default function Overview() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function Row({ label, value, color = 'text-fg' }: { label: string; value: number | string; color?: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-muted">{label}</span>
+      <span className={`font-mono font-medium ${color}`}>{value}</span>
     </div>
   );
 }
