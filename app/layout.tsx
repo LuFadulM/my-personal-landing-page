@@ -14,10 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           rel="stylesheet"
         />
       </head>
-      <body
-        className="bg-bg text-fg antialiased min-h-screen"
-        style={{ fontFamily: "'Outfit', system-ui, sans-serif" }}
-      >
+      <body className="bg-bg text-fg antialiased min-h-screen font-body">
         {children}
       </body>
     </html>
