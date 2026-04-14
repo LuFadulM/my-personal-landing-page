@@ -10,7 +10,6 @@ import {
   Sunrise,
   BookOpen,
   Upload,
-  Users,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -25,7 +24,6 @@ const nav = [
   { href: '/review', label: 'Daily Review', icon: Sunrise },
   { href: '/knowledge', label: 'Knowledge', icon: BookOpen },
   { href: '/import', label: 'Import Data', icon: Upload },
-  { href: '/team', label: 'Team Pulse', icon: Users },
 ];
 
 export default function Sidebar({ collapsed, onToggle }: { collapsed: boolean; onToggle: () => void }) {

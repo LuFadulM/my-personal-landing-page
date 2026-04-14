@@ -2,7 +2,7 @@
 
 import { Command } from 'cmdk';
 import { useRouter } from 'next/navigation';
-import { Home, FileText, Mail, BarChart3, Sunrise, BookOpen, Upload, Users, Settings, Plus } from 'lucide-react';
+import { Home, FileText, Mail, BarChart3, Sunrise, BookOpen, Upload, Settings, Plus } from 'lucide-react';
 import { useEffect } from 'react';
 
 interface Props { open: boolean; onClose: () => void; }
@@ -15,7 +15,6 @@ const pages = [
   { label: 'Daily Review', href: '/review', icon: Sunrise },
   { label: 'Knowledge Base', href: '/knowledge', icon: BookOpen },
   { label: 'Import Data', href: '/import', icon: Upload },
-  { label: 'Team Pulse', href: '/team', icon: Users },
   { label: 'Settings', href: '/settings', icon: Settings },
 ];
 
