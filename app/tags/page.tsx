@@ -136,7 +136,7 @@ export default function SlackTagsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Slack Tags Tracker"
-        description="Shared ops task tracker — synced between Lucía and Will in real time."
+        description="Shared ops task tracker, synced in real time."
         action={
           <div className="flex gap-2">
             <button onClick={copySummary} className="btn-secondary inline-flex items-center gap-1.5 text-xs">
@@ -338,7 +338,7 @@ function AddTaskForm({
   people: string[];
 }) {
   const [description, setDescription] = useState('');
-  const [fromPerson, setFromPerson] = useState(people[0] || 'Will');
+  const [fromPerson, setFromPerson] = useState('');
   const [channel, setChannel] = useState('#operations');
   const [day, setDay] = useState(new Date().toISOString().split('T')[0]);
   const [saving, setSaving] = useState(false);
@@ -382,6 +382,8 @@ function AddTaskForm({
               value={fromPerson}
               onChange={(e) => setFromPerson(e.target.value)}
               list="people-list"
+              placeholder="Who tagged you?"
+              required
               className="w-full bg-elevated border border-border rounded-md px-2.5 py-1.5 text-sm mt-1"
             />
             <datalist id="people-list">
