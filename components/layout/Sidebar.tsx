@@ -10,6 +10,7 @@ import {
   Sunrise,
   BookOpen,
   Upload,
+  Tag,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -18,6 +19,7 @@ import { cn } from '@/lib/utils';
 
 const nav = [
   { href: '/', label: 'Dashboard', icon: Home },
+  { href: '/tags', label: 'Slack Tags', icon: Tag },
   { href: '/jds', label: 'JD Tracker', icon: FileText },
   { href: '/emails', label: 'Email Tracker', icon: Mail },
   { href: '/kpis', label: 'KPIs', icon: BarChart3 },
