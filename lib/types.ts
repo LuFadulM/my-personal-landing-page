@@ -142,3 +142,15 @@ export interface SheetSync {
   last_status: string | null;
   created_at: string;
 }
+
+export interface SlackTag {
+  id: number;
+  day: string;
+  from_person: string;
+  channel: string;
+  description: string;
+  done: boolean;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}

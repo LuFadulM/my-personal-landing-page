@@ -2,13 +2,14 @@
 
 import { Command } from 'cmdk';
 import { useRouter } from 'next/navigation';
-import { Home, FileText, Mail, BarChart3, Sunrise, BookOpen, Upload, Settings, Plus } from 'lucide-react';
+import { Home, FileText, Mail, BarChart3, Sunrise, BookOpen, Upload, Tag, Settings, Plus } from 'lucide-react';
 import { useEffect } from 'react';
 
 interface Props { open: boolean; onClose: () => void; }
 
 const pages = [
   { label: 'Dashboard', href: '/', icon: Home },
+  { label: 'Slack Tags Tracker', href: '/tags', icon: Tag },
   { label: 'JD Tracker', href: '/jds', icon: FileText },
   { label: 'Email Tracker', href: '/emails', icon: Mail },
   { label: 'KPIs', href: '/kpis', icon: BarChart3 },
