@@ -14,11 +14,13 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  Bot,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const nav = [
   { href: '/', label: 'Dashboard', icon: Home },
+  { href: '/agent', label: 'AI Agent', icon: Bot },
   { href: '/tags', label: 'Slack Tags', icon: Tag },
   { href: '/jds', label: 'JD Tracker', icon: FileText },
   { href: '/emails', label: 'Email Tracker', icon: Mail },

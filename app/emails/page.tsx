@@ -8,7 +8,7 @@ import StatCard from '@/components/ui/StatCard';
 import { Badge, Dot } from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
 import SupabaseGate from '@/components/ui/SupabaseGate';
-import { Search, Mail, Plus, X, Save } from 'lucide-react';
+import { Search, Mail, Plus, X, Save, Sparkles, Copy, Check, Loader2 } from 'lucide-react';
 import type { Candidate, ResponseStatus } from '@/lib/types';
 import { formatDate, daysSince, nextFollowupDue } from '@/lib/utils';
 
@@ -29,6 +29,41 @@ export default function EmailsPage() {
   const [filter, setFilter] = useState<'all' | 'needs_fu' | 'replied_week' | 'no_response'>('all');
   const [statusFilter, setStatusFilter] = useState<ResponseStatus | 'All'>('All');
   const [showNew, setShowNew] = useState(false);
+  const [draftOpen, setDraftOpen] = useState<string | null>(null);
+  const [draftText, setDraftText] = useState<Record<string, string>>({});
+  const [draftLoading, setDraftLoading] = useState<Record<string, boolean>>({});
+
+  async function generateDraft(c: Candidate) {
+    setDraftOpen(c.id);
+    if (draftText[c.id]) return;
+    setDraftLoading((p) => ({ ...p, [c.id]: true }));
+    setDraftText((p) => ({ ...p, [c.id]: '' }));
+    try {
+      const res = await fetch('/api/ai/draft-followup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          candidate: c.name,
+          role: c.role?.title ?? 'the role',
+          client: c.role?.client?.name ?? 'the company',
+          round: c.followup_round,
+          daysSince: daysSince(c.intro_sent_at),
+        }),
+      });
+      if (!res.ok) throw new Error('Failed');
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        setDraftText((p) => ({ ...p, [c.id]: (p[c.id] ?? '') + decoder.decode(value) }));
+      }
+    } catch {
+      setDraftText((p) => ({ ...p, [c.id]: 'Error generating draft. Check ANTHROPIC_API_KEY.' }));
+    } finally {
+      setDraftLoading((p) => ({ ...p, [c.id]: false }));
+    }
+  }
 
   const { data: candidates = [] } = useQuery({
     queryKey: ['candidates'],
@@ -176,6 +211,7 @@ export default function EmailsPage() {
                 </thead>
                 <tbody>
                   {filtered.map((c) => (
+                    <>
                     <tr key={c.id} className="border-b border-border/50 hover:bg-elevated/30">
                       <td className="px-4 py-3">
                         <div className="font-medium">{c.name}</div>
@@ -208,6 +244,12 @@ export default function EmailsPage() {
                         <div className="flex justify-end gap-1">
                           {c.response_status === 'pending' && (
                             <>
+                              <button
+                                onClick={() => generateDraft(c)}
+                                className="text-xs px-2 py-1 rounded bg-elevated border border-border text-muted hover:text-fg hover:border-gold/40 inline-flex items-center gap-1"
+                              >
+                                <Sparkles size={10} /> Draft
+                              </button>
                               <button onClick={() => markReplied(c.id)} className="text-xs px-2 py-1 rounded bg-success/15 text-success hover:bg-success/25">Replied</button>
                               {c.followup_round < 3 && (
                                 <button onClick={() => advanceFollowup(c)} className="text-xs px-2 py-1 rounded bg-gold/15 text-gold hover:bg-gold/25">+FU</button>
@@ -217,6 +259,19 @@ export default function EmailsPage() {
                         </div>
                       </td>
                     </tr>
+                    {draftOpen === c.id && (
+                      <tr key={`${c.id}-draft`} className="bg-elevated/20">
+                        <td colSpan={8} className="px-4 py-3">
+                          <InlineDraft
+                            loading={!!draftLoading[c.id]}
+                            text={draftText[c.id] ?? ''}
+                            onClose={() => setDraftOpen(null)}
+                            onRefresh={() => { setDraftText((p) => ({ ...p, [c.id]: '' })); generateDraft(c); }}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                    </>
                   ))}
                 </tbody>
               </table>
@@ -227,6 +282,54 @@ export default function EmailsPage() {
       </SupabaseGate>
 
       {showNew && <NewCandidateModal roles={roles} onClose={() => setShowNew(false)} onCreated={() => { qc.invalidateQueries({ queryKey: ['candidates'] }); setShowNew(false); }} />}
+    </div>
+  );
+}
+
+function InlineDraft({ loading, text, onClose, onRefresh }: { loading: boolean; text: string; onClose: () => void; onRefresh: () => void }) {
+  const [copied, setCopied] = useState(false);
+
+  let body = text;
+  try {
+    const parsed = JSON.parse(text);
+    body = parsed.body ?? text;
+  } catch {}
+
+  function copy() {
+    navigator.clipboard.writeText(body);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div className="rounded-xl border border-gold/20 bg-surface p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-gold font-medium">
+          <Sparkles size={12} />
+          AI Draft — Contrario Voice
+          {loading && <Loader2 size={11} className="animate-spin text-muted" />}
+        </div>
+        <div className="flex items-center gap-1">
+          <button onClick={onRefresh} className="text-xs px-2 py-1 rounded border border-border text-muted hover:text-fg">Regenerate</button>
+          <button onClick={onClose} className="p-1 text-muted hover:text-fg"><X size={13} /></button>
+        </div>
+      </div>
+      {body && (
+        <>
+          <div className="text-sm text-fg whitespace-pre-wrap leading-relaxed font-mono bg-elevated/50 rounded-lg px-3 py-2.5 border border-border/50">
+            {body}
+          </div>
+          <div className="flex justify-end">
+            <button
+              onClick={copy}
+              className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-gold/15 text-gold hover:bg-gold/25 transition-colors"
+            >
+              {copied ? <Check size={11} /> : <Copy size={11} />}
+              {copied ? 'Copied!' : 'Copy to clipboard'}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
